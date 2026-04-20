@@ -1,0 +1,14 @@
+# Python 관련
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# 데이터 파일 (대용량 또는 민감 정보)
+*.json
+*.csv
+
+# 운영체제/IDE 관련
+.vscode/
+.DS_Store
