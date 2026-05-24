@@ -35,7 +35,6 @@ def crawl_final_refined():
             driver.get(link)
             time.sleep(random.uniform(3, 5)) 
 
-            # [수정된 핵심 로직] 알려주신 태그 정보 반영
             # 1. 상품명 추출 (span 태그 및 MDS 데이터 속성 활용)
             name = "상품명 찾기 실패"
             name_elements = driver.find_elements(By.CSS_SELECTOR, "span[data-mds='Typography']")
@@ -45,14 +44,28 @@ def crawl_final_refined():
                     name = ne.text
                     break
 
-            # 2. 이미지 URL 추출 (Swiper 클래스 활용)
+            # 2. [완벽 수정] 메인 의류 누끼 이미지 URL 추출
             img_url = ""
-            img_elements = driver.find_elements(By.CSS_SELECTOR, "img.Swiper__Img-sc-j9bha0-8, img[class*='Swiper__Img']")
+            
+            # [우선순위 1] 무신사 메인 상품 이미지 영역 크롤링
+            # 보통 메인 포토 스퀘어 캔버스 내부의 img 태그를 조준합니다.
+            img_elements = driver.find_elements(By.CSS_SELECTOR, "div[class*='ProductImage'] img, div[class*='Thumbnail'] img, .product-img img")
+            
+            if not img_elements:
+                # 기존 Swiper 클래스 기반 탐색 (폴백 1)
+                img_elements = driver.find_elements(By.CSS_SELECTOR, "img.Swiper__Img-sc-j9bha0-8, img[class*='Swiper__Img']")
+            
             if img_elements:
                 img_url = img_elements[0].get_attribute("src")
             else:
-                # 예비용: 아까 확인한 큰 이미지 ID
-                img_url = driver.find_element(By.ID, "detail_bigimg").get_attribute("src") if driver.find_elements(By.ID, "detail_bigimg") else ""
+                # [폴백 2] 메인 오픈그래프 메타 태그에서 대표 이미지(누끼) 파싱 (가장 확실하고 안전함)
+                og_image = driver.find_elements(By.CSS_SELECTOR, "meta[property='og:image']")
+                if og_image:
+                    img_url = og_image[0].get_attribute("content")
+
+            # 만약 수집된 주소에 하단 디테일 컷 패턴(detail_)이 포함되어 있다면 메인 썸네일 주소 구조로 강제 치환
+            if "detail_" in img_url:
+                img_url = img_url.replace("detail_", "").split("?")[0]
 
             product_data.append({
                 "id": idx + 1,
@@ -60,10 +73,10 @@ def crawl_final_refined():
                 "img_url": img_url,
                 "link": link
             })
-            print(f"[{idx+1}/{len(all_links)}] ✅ {name} 수집 성공")
+            print(f"[{idx+1}/{len(all_links)}] ✅ {name} 수집 성공\n   -> URL: {img_url}")
             
         except Exception as e:
-            print(f"[{idx+1}] 실패")
+            print(f"[{idx+1}] 실패: {str(e)}")
             continue
             
     return product_data
